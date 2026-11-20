@@ -162,6 +162,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.status = QtWidgets.QLabel("")
         self.statusBar().addWidget(self.status)
 
+        self._gauge_params = None
+        self._arrow_pos = None
+        self._arrow_target = None
+        self._anim_timer = QtCore.QTimer(self)
+        self._anim_timer.timeout.connect(self._krok_animacji)
+
     def _val_or_none(self, spin):
         v = spin.value()
         return v if v and v > 0 else None
@@ -203,43 +209,13 @@ class MainWindow(QtWidgets.QMainWindow):
         tekst += "\n\n" + r.pasek(bmi_val)
         self.report.setPlainText(tekst)
 
-        if HAS_MPL:
-            self.fig.clear()
-            ax = self.fig.add_subplot(111)
-            _k = self._kolory()
-            self.fig.patch.set_facecolor(_k["bg"])
-            ax.set_facecolor(_k["bg"])
-            min_v, max_v = 12.0, 42.0
-            ax.set_xlim(min_v, max_v)
-            ax.set_ylim(0, 10)
-            ax.axis("off")
-            ax.set_title("Twoje BMI na skali WHO", fontsize=13, fontweight="bold", pad=10)
-
-            for nazwa, dol, gor, kolor, _ in bmi_core.KATEGORIE_WHO:
-                a = max(dol, min_v)
-                b = min(gor, max_v)
-                ax.barh(5, b - a, left=a, height=2.2, color=kolor, alpha=0.85,
-                        edgecolor="white", linewidth=1.5)
-                if b - a > 2.5:
-                    ax.text((a + b) / 2, 5, f"{a:g}–{b:g}", ha="center",
-                            va="center", fontsize=8.5, color="white", fontweight="bold")
-
-            x = min(max(bmi_val, min_v), max_v)
-            ax.add_patch(Polygon(
-                [(x - 0.9, 8.4), (x + 0.9, 8.4), (x, 6.6)],
-                color="#1d3557", zorder=5))
-            ax.text(x, 8.8, f"BMI {bmi_val:.1f}", ha="center", va="bottom",
-                    fontsize=11, fontweight="bold", color="#1d3557")
-
-            lo, hi = bmi_core.BMICalculator.zdrowy_zakres_kg(wzrost)
-            jednostka = "lbs" if imperial else "kg"
-            ax.text((min_v + max_v) / 2, 3.0,
-                    f"Zdrowa waga dla {wzrost * 100:.0f} cm: {lo:.1f}–{hi:.1f} {jednostka}",
-                    ha="center", fontsize=9.5)
-            ax.text((min_v + max_v) / 2, 1.4,
-                    f"Waga: {waga:.1f} {jednostka}   Wzrost: {wzrost * 100:.1f} cm",
-                    ha="center", fontsize=9, color="#555")
-            self.canvas.draw()
+        self._gauge_params = (bmi_val, waga, wzrost, imperial)
+        target = min(max(bmi_val, 12.0), 42.0)
+        if self._arrow_pos is None:
+            self._arrow_pos = target
+        self._arrow_target = target
+        self.rysuj_gauge(arrow_x=self._arrow_pos)
+        self._anim_timer.start(16)
 
         if self.zapisz.isChecked():
             hist = bmi_core.Historia(bmi_core.DEFAULT_HISTORIA)
@@ -295,6 +271,62 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fig_trend.tight_layout()
         self.canvas_trend.draw()
 
+    def rysuj_gauge(self, arrow_x=None):
+        if not HAS_MPL or not self._gauge_params:
+            return
+        bmi_val, waga, wzrost, imperial = self._gauge_params
+        if arrow_x is None:
+            arrow_x = min(max(bmi_val, 12.0), 42.0)
+        _k = self._kolory()
+        self.fig.clear()
+        ax = self.fig.add_subplot(111)
+        self.fig.patch.set_facecolor(_k["bg"])
+        ax.set_facecolor(_k["bg"])
+        min_v, max_v = 12.0, 42.0
+        ax.set_xlim(min_v, max_v)
+        ax.set_ylim(0, 10)
+        ax.axis("off")
+        ax.set_title("Twoje BMI na skali WHO", fontsize=13, fontweight="bold", pad=10,
+                     color=_k["fg"])
+
+        for nazwa, dol, gor, kolor, _ in bmi_core.KATEGORIE_WHO:
+            a = max(dol, min_v)
+            b = min(gor, max_v)
+            ax.barh(5, b - a, left=a, height=2.2, color=kolor, alpha=0.85,
+                    edgecolor="white", linewidth=1.5)
+            if b - a > 2.5:
+                ax.text((a + b) / 2, 5, f"{a:g}–{b:g}", ha="center",
+                        va="center", fontsize=8.5, color="white", fontweight="bold")
+
+        ax.add_patch(Polygon(
+            [(arrow_x - 0.9, 8.4), (arrow_x + 0.9, 8.4), (arrow_x, 6.6)],
+            color="#1d3557", zorder=5))
+        ax.text(arrow_x, 8.8, f"BMI {bmi_val:.1f}", ha="center", va="bottom",
+                fontsize=11, fontweight="bold", color="#1d3557")
+
+        lo, hi = bmi_core.BMICalculator.zdrowy_zakres_kg(wzrost)
+        jednostka = "lbs" if imperial else "kg"
+        ax.text((min_v + max_v) / 2, 3.0,
+                f"Zdrowa waga dla {wzrost * 100:.0f} cm: {lo:.1f}–{hi:.1f} {jednostka}",
+                ha="center", fontsize=9.5, color=_k["fg"])
+        ax.text((min_v + max_v) / 2, 1.4,
+                f"Waga: {waga:.1f} {jednostka}   Wzrost: {wzrost * 100:.1f} cm",
+                ha="center", fontsize=9, color="#888888")
+        self.canvas.draw()
+
+    def _krok_animacji(self):
+        if self._arrow_pos is None or self._arrow_target is None:
+            self._anim_timer.stop()
+            return
+        diff = self._arrow_target - self._arrow_pos
+        if abs(diff) < 0.05:
+            self._arrow_pos = self._arrow_target
+            self.rysuj_gauge(arrow_x=self._arrow_pos)
+            self._anim_timer.stop()
+            return
+        self._arrow_pos += diff * 0.25
+        self.rysuj_gauge(arrow_x=self._arrow_pos)
+
     def eksportuj_png(self):
         if not HAS_MPL:
             return
@@ -316,9 +348,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 "title": "#000000", "healthy": "#2e7d32"}
 
     def zmien_motyw(self):
-        # zastosuj motyw do figur
+        # zastosuj motyw do aplikacji
+        app = QtWidgets.QApplication.instance()
+        if self._ciemny():
+            app.setStyle("Fusion")
+            pal = QtGui.QPalette()
+            pal.setColor(QtGui.QPalette.Window, QtGui.QColor(53, 53, 53))
+            pal.setColor(QtGui.QPalette.WindowText, QtGui.QColor(220, 220, 220))
+            pal.setColor(QtGui.QPalette.Base, QtGui.QColor(35, 35, 35))
+            pal.setColor(QtGui.QPalette.AlternateBase, QtGui.QColor(53, 53, 53))
+            pal.setColor(QtGui.QPalette.Text, QtGui.QColor(220, 220, 220))
+            pal.setColor(QtGui.QPalette.Button, QtGui.QColor(53, 53, 53))
+            pal.setColor(QtGui.QPalette.ButtonText, QtGui.QColor(220, 220, 220))
+            app.setPalette(pal)
+        else:
+            app.setPalette(QtGui.QPalette())
+        if self._gauge_params:
+            self.rysuj_gauge(arrow_x=self._arrow_pos if self._arrow_pos is not None else self._arrow_target)
         self.rysuj_trend()
-        # przerysuj gauge jeśli jest tekst w raporcie? ponownie oblicz
         self.status.setText("Zmieniono motyw.")
 
     def kopiuj_wykres(self):
