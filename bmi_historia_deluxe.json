@@ -1,0 +1,42 @@
+[
+  {
+    "data": "2026-08-23",
+    "waga": 70.0,
+    "wzrost": 1.75,
+    "bmi": 22.857142857142858,
+    "wiek": null,
+    "plec": null
+  },
+  {
+    "data": "2026-11-20",
+    "waga": 69.85330805308853,
+    "wzrost": 1.7526,
+    "bmi": 22.74161815332394,
+    "wiek": null,
+    "plec": null
+  },
+  {
+    "data": "2026-08-23",
+    "waga": 120.0,
+    "wzrost": 1.85,
+    "bmi": 35.06,
+    "wiek": null,
+    "plec": null
+  },
+  {
+    "data": "2026-08-23",
+    "waga": 55.0,
+    "wzrost": 1.73,
+    "bmi": 18.38,
+    "wiek": null,
+    "plec": null
+  },
+  {
+    "data": "2026-08-23",
+    "waga": 120.0,
+    "wzrost": 1.85,
+    "bmi": 35.06,
+    "wiek": null,
+    "plec": null
+  }
+]
