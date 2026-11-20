@@ -1,5 +1,10 @@
 __pycache__/
 *.pyc
+.venv/
+venv/
+bmi_wykres*
 *.png
-*.pdf
 *.svg
+*.pdf
+bmi_historia_interaktywna.html
+.DS_Store

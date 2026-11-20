@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bmi-deluxe"
+version = "1.0.0"
+description = "Zaawansowany kalkulator BMI (Deluxe)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.5"]
+desktop = ["PySide6>=6.5", "matplotlib>=3.5"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+bmi = "bmi:main"
+bmi-web = "bmi_web:main"
+bmi-desktop = "bmi_desktop:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools]
+py-modules = ["bmi", "bmi_core", "bmi_charts", "bmi_web", "bmi_desktop"]

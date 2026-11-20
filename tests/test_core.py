@@ -37,3 +37,15 @@ def test_kategoria_tłuszczu():
     kat, _ = bmi.kategoria_tłuszczu(20.0, "K")
     assert kat == "Atletyczny"
 
+
+def test_liczba_inf():
+    assert bmi.liczba(float("inf")) == "—"
+
+
+def test_walidacja_wieku():
+    bmi.BMICalculator.walidacja_wieku(30)
+    with pytest.raises(ValueError):
+        bmi.BMICalculator.walidacja_wieku(200)
+    with pytest.raises(ValueError):
+        bmi.BMICalculator.walidacja_wieku(-5)
+
